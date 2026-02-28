@@ -3,34 +3,36 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.control.ContextMenu?>
-<?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.control.SeparatorMenuItem?>
 
-<BorderPane prefHeight="700.0" prefWidth="1000.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/25" fx:controller="com.nexus.MainController">
+<BorderPane prefHeight="700.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nexus.MainController">
 
     <top>
         <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-background-color: #16171a;">
             <padding><Insets bottom="15" left="15" right="15" top="15" /></padding>
             <TextField fx:id="searchField" promptText="Search your workspace..." style="-fx-background-radius: 20;" HBox.hgrow="ALWAYS" />
-            <Button fx:id="scanButton" onAction="#handleScan" style = "-fx-text-fill: white; -fx-font-weight: bold;" text="Scan Folder" />
+            <Button fx:id="scanButton" onAction="#handleScan" style="-fx-text-fill: white; -fx-font-weight: bold;" text="Scan Folder" />
         </HBox>
     </top>
 
     <left>
-        <VBox prefWidth="200" spacing="10" style="-fx-background-color: #20252b;">
+        <VBox fx:id="sidebarVBox" prefWidth="200" spacing="10" style="-fx-background-color: #20252b;">
             <padding><Insets left="15" right="15" top="20" /></padding>
             <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12;" text="COLLEGE WORK" />
-            <Button maxWidth="Infinity" style="-fx-alignment: BASELINE_LEFT;" text="All Files" />
-            <Button maxWidth="Infinity" style="-fx-alignment: BASELINE_LEFT;" text="Java Project" />
-            <Button maxWidth="Infinity" style="-fx-alignment: BASELINE_LEFT;" text="Assignments" />
+            <Button fx:id="allFilesBtn" maxWidth="Infinity" onAction="#handleSidebarAction" style="-fx-alignment: BASELINE_LEFT;" text="All Files" />
+            <Button fx:id="javaProjectBtn" maxWidth="Infinity" onAction="#handleSidebarAction" style="-fx-alignment: BASELINE_LEFT;" text="Java Project" />
+            <Button fx:id="assignmentsBtn" maxWidth="Infinity" onAction="#handleSidebarAction" style="-fx-alignment: BASELINE_LEFT;" text="Assignments" />
+         <Button fx:id="addWorkspaceBtn" alignment="CENTER" mnemonicParsing="false" onAction="#handleAddNewWorkspace" prefHeight="25.0" prefWidth="36.0" text="+">
+            <VBox.margin>
+               <Insets />
+            </VBox.margin>
+         </Button>
         </VBox>
     </left>
 
@@ -47,10 +49,10 @@
     <bottom>
         <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-background-color: #2c3e50;">
             <padding>
-                <Insets top="5" right="10" bottom="5" left="10"/>
+                <Insets bottom="5" left="10" right="10" top="5" />
             </padding>
-            <Label fx:id="statusLabel" text="Ready" style="-fx-text-fill: #bdc3c7; -fx-font-size: 11;"/>
-            <ProgressBar fx:id="progressBar" visible="false" prefWidth="200" />
+            <Label fx:id="statusLabel" style="-fx-text-fill: #bdc3c7; -fx-font-size: 11;" text="Ready" />
+            <ProgressBar fx:id="progressBar" prefWidth="200" visible="false" />
         </HBox>
     </bottom>
 

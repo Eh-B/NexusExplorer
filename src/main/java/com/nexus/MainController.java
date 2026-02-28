@@ -3,6 +3,8 @@
 
 package com.nexus;
 import javafx.fxml.FXML;
+import javafx.event.ActionEvent;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -11,6 +13,8 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.layout.VBox;
 import javafx.scene.control.TableCell;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -25,6 +29,7 @@ import java.util.List;
 import javafx.util.Callback;
 
 public class MainController {
+    private FileIndexerService indexerService = new FileIndexerService();
     @FXML
     private TableView<NexusFile> fileTable;
     @FXML
@@ -39,6 +44,16 @@ public class MainController {
     private Label statusLabel;
     @FXML
     private ProgressBar progressBar;
+    @FXML
+    private VBox sidebarVBox;
+    @FXML
+    private Button allFilesBtn;
+    @FXML
+    private Button javaProjectBtn;
+    @FXML
+    private Button assignmentsBtn;
+    @FXML
+    private Button addWorkspaceBtn;
 
     private ObservableList<NexusFile> masterData = FXCollections.observableArrayList();
     private FilteredList<NexusFile> filteredData;
@@ -70,30 +85,35 @@ public class MainController {
         setupContextMenu();
         simulateScan();
 
+        // Listen for any changes (scans, loads, or deletes) to update counts
+        masterData.addListener((javafx.beans.Observable c) -> {
+        updateWorkspaceCounts();
+        });
     }
 
+
     private void filterData(String query) {
-        // We update the "Predicate" (the rule) of our FilteredList
         filteredData.setPredicate(file -> {
-            // If search bar is empty, show everything
-            if (query == null || query.isEmpty()) return true;
-            String lowerCaseFilter = query.toLowerCase();
+            // 1. If the search bar is empty, show everything
+            if (query == null || query.isEmpty()) {
+                return true;
+            }
 
-            // PLACEHOLDER: Member 2 will replace this .contains() with Fuzzy Search logic
-            boolean matchesName = file.getName().toLowerCase().contains(lowerCaseFilter);
-            boolean matchesTag = file.getTag().toLowerCase().contains(lowerCaseFilter);
+            // Member 2's fuzzy search methods here
+            boolean matchesName = isFuzzyMatch(query, file.getName());
+            boolean matchesTag = isFuzzyMatch(query, file.getTag());
 
+            // 4. If either matches, keep the file in the table
             return matchesName || matchesTag;
         });
 
-
-        // Update the UI feedback
+        // 5. Update the UI Label to tell the user how many matches were found
         if (filteredData.isEmpty() && !query.isEmpty()) {
             statusLabel.setText("No results found for: " + query);
         } else {
-            statusLabel.setText("Showing " + filteredData.size() + " files.");
+            statusLabel.setText("Matches found: " + filteredData.size());
         }
-}
+    }
     @FXML
     private void handleScan() {
         DirectoryChooser dc = new DirectoryChooser();
@@ -105,8 +125,6 @@ public class MainController {
             startSmartScan(selectedDir);
         }
     }
-
-    
 
     private void simulateScan() {
         // Member 1 prepares the UI
@@ -136,50 +154,132 @@ public class MainController {
         MenuItem deleteFile = new MenuItem("Delete from View");
         deleteFile.setOnAction(e -> {
             NexusFile selected = fileTable.getSelectionModel().getSelectedItem();
-            if (selected != null) masterData.remove(selected);
+            if (selected != null) {
+                    masterData.remove(selected);
+                    deleteFileFromDatabase(selected);
+            }
         });
         contextMenu.getItems().addAll(new MenuItem("Open File"), deleteFile, new SeparatorMenuItem(), new MenuItem("Properties"));
         fileTable.setContextMenu(contextMenu);
     }
 
+    private void updateWorkspaceCounts() {
+        // 1. All Files Count
+        allFilesBtn.setText("All Files (" + masterData.size() + ")");
 
-private void startSmartScan(File rootFolder) {
-    // 1. Prepare UI (Main Thread)
-    progressBar.setVisible(true);
-    statusLabel.setText("Scanning: " + rootFolder.getName());
+        // 2. Java Project Count
+        long javaCount = masterData.stream()
+            .filter(f -> f.getType().equalsIgnoreCase("JAVA") || f.getTag().equals("#Code"))
+            .count();
+        javaProjectBtn.setText("Java Project (" + javaCount + ")");
 
-    // 2. Start Background Engine (Worker Thread)
-    Thread scanThread = new Thread(() -> {
+        // 3. Assignments Count
+        long assignCount = masterData.stream()
+            .filter(f -> f.getTag().equalsIgnoreCase("#Notes"))
+            .count();
+        assignmentsBtn.setText("Assignments (" + assignCount + ")");
+        
+        // Note: If you add dynamic buttons, you'd loop through sidebarVBox here.
+    }
 
-        /// Member 2's scanning function call here -> (should return a "List<NexusFile> results")*****
-        /// List<NexusFile> results = 'Member 2's function here'
+    @FXML
+    private void handleSidebarAction(javafx.event.ActionEvent event) {
+        // 1. Identify which button was clicked
+        Button clickedButton = (Button) event.getSource();
+        String workspaceName = clickedButton.getText(); // e.g., "Java Project" or "Assignments"
 
-        // 3. Update UI with Results (Back to Main Thread)
-        Platform.runLater(() -> {
-            masterData.addAll(results); // Add all found files to the table
-            progressBar.setVisible(false);
-            statusLabel.setText("Scan Complete. Found " + results.size() + " files.");
+        // 2. Update the status bar for visual feedback
+        statusLabel.setText("Workspace: " + workspaceName);
 
-            /// Member 3's save to database function call here -> (take "masterData" as arguement)*****
-            saveFilesToDatabase(masterData);
+        // 3. Apply the workspace filter
+        filteredData.setPredicate(file -> {
+            // "All Files" shows everything
+            if (workspaceName.equalsIgnoreCase("All Files")) {
+                return true;
+            }
+
+            // Filter logic based on the workspace name
+            switch (workspaceName.toLowerCase()) {
+                case "java project":
+                    return file.getType().equals("JAVA") || file.getTag().equals("#Code");
+                case "assignments":
+                    return file.getTag().equals("#Notes");
+                default:
+                    // For custom tags, check if the file's tag matches the button text
+                    return file.getName().toLowerCase().contains(workspaceName.toLowerCase()) ||
+                       file.getTag().equalsIgnoreCase("#" + workspaceName);
+            }
         });
-    });
+        statusLabel.setText("Active Workspace: " + workspaceName);
+        // Remove "active" style from all buttons (assuming you have a VBox 'sidebarVBox')
+        sidebarVBox.getChildren().forEach(node -> node.getStyleClass().remove("active-workspace"));
+        // Add "active" style to the clicked button`
+        clickedButton.getStyleClass().add("active-workspace");
 
-    scanThread.setDaemon(true); // Ensures the thread closes if you exit the app
-    scanThread.start();
+    }
+    @FXML
+    private void handleAddNewWorkspace() {
+        TextInputDialog dialog = new TextInputDialog("New Workspace");
+        dialog.setTitle("Create Workspace");
+        dialog.setHeaderText("Enter workspace name (e.g., 'Exams'):");
+
+        dialog.showAndWait().ifPresent(name -> {
+            // 1. Create the new button
+            Button newBtn = new Button(name);
+            newBtn.setMaxWidth(Double.MAX_VALUE); // Make it fill the sidebar width
+            newBtn.getStyleClass().add("button"); // Keep your styling
+            // 2. Wire it to the same action handler as the others
+            newBtn.setOnAction(this::handleSidebarAction);
+
+            // 3. Add it to the sidebar container
+            sidebarVBox.getChildren().add(sidebarVBox.getChildren().size() - 1, newBtn);
+
+            statusLabel.setText("Created Workspace: " + name);
+        });
+    }
+
+    private void startSmartScan(File rootFolder) {
+        // 1. Prepare UI (Main Thread)
+        progressBar.setVisible(true);
+        statusLabel.setText("Scanning: " + rootFolder.getName());
+
+        // 2. Start Background Engine (Worker Thread)
+        Thread scanThread = new Thread(() -> {
+
+            /// Member 2's scanning function call here -> (should return a "List<NexusFile> results")*****
+            /// List<NexusFile> results = 'Member 2's function here' 
+            List<NexusFile> results = indexerService.simpleScan(rootFolder);
+            // 3. Update UI with Results (Back to Main Thread)
+            Platform.runLater(() -> {
+                masterData.addAll(results); // Add all found files to the table
+                progressBar.setVisible(false);
+                statusLabel.setText("Scan Complete. Found " + results.size() + " files.");
+
+                /// Member 3's save to database function call here -> (take "masterData" as arguement)*****
+                saveFilesToDatabase(masterData);
+            });
+        });
+
+        scanThread.setDaemon(true); // Ensures the thread closes if you exit the app
+        scanThread.start();
+    }
+
+    private boolean isFuzzyMatch(String query, String target) {
+        /// Member 2 references their fuzzy search algorithm here
+        return target.toLowerCase().contains(query.toLowerCase()); //placeholder
+    }
+
+    private void saveFilesToDatabase(List<NexusFile> files) {
+        /// Member 3 references their saving function here
+    }
+
+    private List<NexusFile> loadFilesFromDatabase() {
+        /// Member 3 references their loading function
+        return new java.util.ArrayList<>();//placeholder
+    }
+
+    private void deleteFileFromDatabase(NexusFile file) { 
+    /// Member 3's delete from database method here
 }
 
-private boolean isFuzzyMatch(String query, String target) {
-    /// Member 2 references their fuzzy search algorithm here
-    return target.toLowerCase().contains(query.toLowerCase()); //placeholder
-}
-
-private void saveFilesToDatabase(List<NexusFile> files) {
-    /// Member 3 references their saving function here
-}
-
-private List<NexusFile> loadFilesFromDatabase() {
-    /// Member 3 references their loading function
-    return new java.util.ArrayList<>();//placeholder
-}
 }

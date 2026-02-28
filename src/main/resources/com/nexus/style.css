@@ -74,3 +74,16 @@
   -fx-scale-x: 0.95; /* Sinks in slightly when clicked */
   -fx-scale-y: 0.95;
 }
+
+.active-workspace {
+  -fx-background-color: #3d3d3d;
+  -fx-border-color: #0078d7;
+  -fx-border-width: 0 0 0 4; /* Adds a skyblue stripe on the left */
+}
+
+.sidebar-button {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 20; /* Top, Right, Bottom, Left */
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+}
