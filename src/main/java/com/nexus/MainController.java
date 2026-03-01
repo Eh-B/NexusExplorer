@@ -227,7 +227,7 @@ public class MainController {
             // 1. Create the new button
             Button newBtn = new Button(name);
             newBtn.setMaxWidth(Double.MAX_VALUE); // Make it fill the sidebar width
-            newBtn.getStyleClass().add("button"); // Keep your styling
+            newBtn.getStyleClass().add("sidebar-button"); // Keep your styling
             // 2. Wire it to the same action handler as the others
             newBtn.setOnAction(this::handleSidebarAction);
 
