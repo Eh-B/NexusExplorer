@@ -282,4 +282,21 @@ public class MainController {
     /// Member 3's delete from database method here
     }
 
+    private void openFileInOS(String filePath){
+        try{
+            File file = new File(filePath);
+            if(file.exists())
+                Desktop.getDesktop().open(file);
+            else
+                statusLabel.setText("Error: File not found");
+        }
+        catch (Exception e){
+            statusLabel.setText("Error opening file: " + e.getMessage());
+        }
+    }
+
+    private void clearDatabase(){
+        /// Member 3's clear database function here
+    }
 }
+
