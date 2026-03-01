@@ -37,6 +37,7 @@
   -fx-text-fill: #cccccc;
   -fx-border-radius: 5;
   -fx-padding: 8 15 8 15;
+  -fx-alignment: BASELINE_LEFT;
 }
 
 .button:hover {
@@ -82,8 +83,8 @@
 }
 
 .sidebar-button {
-    -fx-alignment: CENTER_LEFT;
-    -fx-padding: 0 0 0 20; /* Top, Right, Bottom, Left */
-    -fx-background-color: transparent;
-    -fx-text-fill: white;
+  -fx-alignment: CENTER_LEFT;
+  -fx-padding: 0 0 0 20; /* Top, Right, Bottom, Left */
+  -fx-background-color: transparent;
+  -fx-text-fill: white;
 }

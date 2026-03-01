@@ -11,9 +11,28 @@ import java.util.List;
 public class FileIndexerService {
 
     public List<NexusFile> simpleScan(File rootFolder) {
-        // Return an empty list for now so the UI doesn't crash
+
+        List<NexusFile> results = new ArrayList<>();
         System.out.println("STUB: simpleScan called for " + rootFolder.getName());
-        return new ArrayList<>(); 
+
+        if (rootFolder != null && rootFolder.isDirectory()) {
+            File[] files = rootFolder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) { // Only grab files, ignore sub-folders for now
+                        String name = file.getName();
+                        // Grab the file extension (like 'pdf' or 'java') for the category column
+                        String type = "UNKNOWN";
+                        if (name.contains(".")) {
+                            type = name.substring(name.lastIndexOf(".") + 1).toUpperCase();
+                        }
+                        // Add the actual file to your list
+                        results.add(new NexusFile(name, file.getAbsolutePath(), type, "#Uncategorized"));
+                    }
+                }
+            }
+        }
+        return results; 
     }
 
     public boolean isFuzzyMatch(String query, String target) {

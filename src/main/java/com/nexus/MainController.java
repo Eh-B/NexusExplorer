@@ -26,6 +26,8 @@ import javafx.stage.DirectoryChooser;
 import java.io.File;
 import java.util.List;
 
+import java.awt.Desktop;
+
 import javafx.util.Callback;
 
 public class MainController {
@@ -69,12 +71,20 @@ public class MainController {
         //All files show on table
         filteredData = new FilteredList<>(masterData, p -> true);
         fileTable.setItems(filteredData);
+        setupContextMenu();
+        fileTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && fileTable.getSelectionModel().getSelectedItem() != null) {
+                NexusFile selectedFile = fileTable.getSelectionModel().getSelectedItem();
+                openFileInOS(selectedFile.getPath());
+            }
+        });
 
         //Search filter that changes the table live
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {filterData(newValue);});
 
         //If no file there
         fileTable.setPlaceholder(new Label("No files found. Try scanning a folder or changing your search."));
+
         //Display selected in status bar
         fileTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
@@ -82,12 +92,13 @@ public class MainController {
             }
         });
 
-        setupContextMenu();
-        simulateScan();
+        // Load previously saved files from the database on startup
+        List<NexusFile> savedFiles = loadFilesFromDatabase();
+        masterData.addAll(savedFiles);
 
         // Listen for any changes (scans, loads, or deletes) to update counts
         masterData.addListener((javafx.beans.Observable c) -> {
-        updateWorkspaceCounts();
+            updateWorkspaceCounts();
         });
     }
 
@@ -126,32 +137,15 @@ public class MainController {
         }
     }
 
-    private void simulateScan() {
-        // Member 1 prepares the UI
-        progressBar.setVisible(true);
-        statusLabel.setText("Scanning directory...");
-
-        // This is how you run things in the background so the UI doesn't freeze
-        Thread backgroundThread = new Thread(() -> {
-            try {
-                // This is where Member 2's code would go.
-                // We simulate a 3-second scan:
-                Thread.sleep(3000);
-
-                // IMPORTANT: You can only touch UI elements from the Main Thread
-                javafx.application.Platform.runLater(() -> {
-                    progressBar.setVisible(false);
-                    statusLabel.setText("Scan Complete!");
-                });
-            } catch (InterruptedException e) { e.printStackTrace(); }
-        });
-        backgroundThread.setDaemon(true); // Closes the thread if you close the app
-        backgroundThread.start();
-    }
-
     private void setupContextMenu() {
         ContextMenu contextMenu = new ContextMenu();
         MenuItem deleteFile = new MenuItem("Delete from View");
+        MenuItem clearWorkspace = new MenuItem("Clear Workspace");
+        clearWorkspace.setOnAction(e -> {
+            masterData.clear();
+            clearDatabase();
+            statusLabel.setText("Workspace cleared.");
+        });
         deleteFile.setOnAction(e -> {
             NexusFile selected = fileTable.getSelectionModel().getSelectedItem();
             if (selected != null) {
@@ -159,7 +153,7 @@ public class MainController {
                     deleteFileFromDatabase(selected);
             }
         });
-        contextMenu.getItems().addAll(new MenuItem("Open File"), deleteFile, new SeparatorMenuItem(), new MenuItem("Properties"));
+        contextMenu.getItems().addAll(new MenuItem("Open File"), deleteFile, new SeparatorMenuItem(), clearWorkspace, new SeparatorMenuItem(), new MenuItem("Properties"));
         fileTable.setContextMenu(contextMenu);
     }
 
@@ -186,7 +180,8 @@ public class MainController {
     private void handleSidebarAction(javafx.event.ActionEvent event) {
         // 1. Identify which button was clicked
         Button clickedButton = (Button) event.getSource();
-        String workspaceName = clickedButton.getText(); // e.g., "Java Project" or "Assignments"
+        String rawText = clickedButton.getText();
+        String workspaceName = rawText.contains("(") ? rawText.substring(0, rawText.indexOf(" (")).trim() : rawText.trim();
 
         // 2. Update the status bar for visual feedback
         statusLabel.setText("Workspace: " + workspaceName);
@@ -215,7 +210,7 @@ public class MainController {
         sidebarVBox.getChildren().forEach(node -> node.getStyleClass().remove("active-workspace"));
         // Add "active" style to the clicked button`
         clickedButton.getStyleClass().add("active-workspace");
-
+        searchField.clear();
     }
     @FXML
     private void handleAddNewWorkspace() {
@@ -251,7 +246,12 @@ public class MainController {
             List<NexusFile> results = indexerService.simpleScan(rootFolder);
             // 3. Update UI with Results (Back to Main Thread)
             Platform.runLater(() -> {
-                masterData.addAll(results); // Add all found files to the table
+                masterData.addAll(results);
+                filterData("");
+                fileTable.refresh();
+                allFilesBtn.fire();
+                searchField.clear();
+
                 progressBar.setVisible(false);
                 statusLabel.setText("Scan Complete. Found " + results.size() + " files.");
 
@@ -280,6 +280,22 @@ public class MainController {
 
     private void deleteFileFromDatabase(NexusFile file) { 
     /// Member 3's delete from database method here
-}
+    }
 
+    private void openFileInOS(String filePath){
+        try{
+            File file = new File(filePath);
+            if(file.exists())
+                Desktop.getDesktop().open(file);
+            else
+                statusLabel.setText("Error: File not found");
+        }
+        catch (Exception e){
+            statusLabel.setText("Error opening file: " + e.getMessage());
+        }
+    }
+
+    private void clearDatabase(){
+        /// Member 3's clear database function here
+    }
 }
