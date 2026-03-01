@@ -222,7 +222,7 @@ public class MainController {
             // 1. Create the new button
             Button newBtn = new Button(name);
             newBtn.setMaxWidth(Double.MAX_VALUE); // Make it fill the sidebar width
-            newBtn.getStyleClass().add("button"); // Keep your styling
+            newBtn.getStyleClass().add("sidebar-button"); // Keep your styling
             // 2. Wire it to the same action handler as the others
             newBtn.setOnAction(this::handleSidebarAction);
 
@@ -282,20 +282,4 @@ public class MainController {
     /// Member 3's delete from database method here
     }
 
-    private void openFileInOS(String filePath){
-        try{
-            File file = new File(filePath);
-            if(file.exists())
-                Desktop.getDesktop().open(file);
-            else
-                statusLabel.setText("Error: File not found");
-        }
-        catch (Exception e){
-            statusLabel.setText("Error opening file: " + e.getMessage());
-        }
-    }
-
-    private void clearDatabase(){
-        /// Member 3's clear database function here
-    }
 }
